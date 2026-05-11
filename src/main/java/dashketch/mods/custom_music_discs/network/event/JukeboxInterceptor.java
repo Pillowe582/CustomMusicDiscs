@@ -6,6 +6,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
@@ -14,7 +15,6 @@ import net.minecraft.world.level.block.JukeboxBlock;
 import net.minecraft.world.level.block.entity.JukeboxBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.gameevent.GameEvent;
-import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
@@ -78,9 +78,9 @@ public class JukeboxInterceptor {
             return;
         }
         Level level = event.getLevel();
-        Vec3 pos = event.getEventPosition();
+        BlockPos pos = BlockPos.containing(event.getEventPosition());
 
-        if (!(level.getBlockEntity(BlockPos.containing(pos)) instanceof JukeboxBlockEntity jukebox)) {
+        if (!(level.getBlockEntity(pos) instanceof JukeboxBlockEntity jukebox)) {
             return;
         }
 
@@ -92,23 +92,27 @@ public class JukeboxInterceptor {
 
         String songName = record.get(DataComponents.CUSTOM_DATA).copyTag().getString("SelectedSong");
         File musicFile = resolveMusicFile(songName);
-        engine.upsertInstance(BlockPos.containing(pos), songName, musicFile);
+        engine.upsertInstance(pos, songName, musicFile);
 
     }
 
     @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Post event) {
+
         Minecraft mc = Minecraft.getInstance();
-        if (mc.level == null || mc.player == null) {
+        Level level = mc.level;
+        Player player = mc.player;
+        if (level == null || player == null) {
             engine.clearInstancesAndStop();
             return;
         }
 
         for (BlockPos pos : engine.getTrackedPositions()) {
-            BlockState trackedState = mc.level.getBlockState(pos);
+            BlockState trackedState = level.getBlockState(pos);
             if (!trackedState.is(Blocks.JUKEBOX) || !trackedState.getValue(JukeboxBlock.HAS_RECORD)) {
                 engine.removeInstance(pos);
             }
+
         }
 
         if (engine.getTrackedPositions().isEmpty()) {
@@ -117,37 +121,22 @@ public class JukeboxInterceptor {
             }
             return;
         }
-
-        BlockPos nearestPos = findNearestTrackedPos(mc);
+        BlockPos nearestPos = findNearestTrackedPos(player);
         if (nearestPos == null) {
             return;
         }
 
         engine.activate(nearestPos);
-
         // If the current track finished naturally, remove the source and fall through
         // to next nearest.
         BlockPos activePos = engine.getActivePos();
-        if (activePos != null && !engine.isPlaying()) {
-            engine.removeInstance(activePos);
-            nearestPos = findNearestTrackedPos(mc);
-            if (nearestPos == null) {
-                return;
-            }
-            engine.activate(nearestPos);
-            if (!engine.isPlaying()) {
-                return;
-            }
-        }
-
-        BlockPos sourcePos = engine.getActivePos();
-        if (sourcePos == null) {
+        if (activePos == null) {
             return;
         }
 
-        double dx = mc.player.getX() - (sourcePos.getX() + 0.5);
-        double dy = mc.player.getY() - (sourcePos.getY() + 0.5);
-        double dz = mc.player.getZ() - (sourcePos.getZ() + 0.5);
+        double dx = player.getX() - (activePos.getX() + 0.5);
+        double dy = player.getY() - (activePos.getY() + 0.5);
+        double dz = player.getZ() - (activePos.getZ() + 0.5);
         double distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
         float sliderMultiplier = dashketch.mods.custom_music_discs.client.override.volume_slider.getJukeboxVolume();
@@ -158,13 +147,13 @@ public class JukeboxInterceptor {
         engine.setVolume(volume);
     }
 
-    private static BlockPos findNearestTrackedPos(Minecraft mc) {
+    private static BlockPos findNearestTrackedPos(Player player) {
         BlockPos currentActive = engine.getActivePos();
         BlockPos nearest = null;
         double nearestDistSq = Double.MAX_VALUE;
 
         for (BlockPos pos : engine.getTrackedPositions()) {
-            double distSq = mc.player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
+            double distSq = player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
             if (distSq < nearestDistSq) {
                 nearestDistSq = distSq;
                 nearest = pos;
