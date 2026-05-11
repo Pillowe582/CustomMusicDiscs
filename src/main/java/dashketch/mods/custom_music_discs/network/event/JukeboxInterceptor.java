@@ -6,7 +6,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
@@ -14,9 +13,12 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.JukeboxBlock;
 import net.minecraft.world.level.block.entity.JukeboxBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.gameevent.GameEvent;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.event.VanillaGameEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import org.essentials.custom_background_music.AudioManager;
 
@@ -29,6 +31,7 @@ public class JukeboxInterceptor {
 
     @SubscribeEvent
     public static void onJukeboxRightClick(PlayerInteractEvent.RightClickBlock event) {
+
         Level level = event.getLevel();
         BlockPos pos = event.getPos();
         ItemStack stack = event.getItemStack();
@@ -64,22 +67,33 @@ public class JukeboxInterceptor {
                             Component.literal("§bNow playing: " + songName.replace(".mp3", "")), true);
                 }
 
-                // If this only happens on the server, the ClientTickEvent fires before the
-                // client receives the packet, sees HAS_RECORD is false, and instantly kills the
-                // music.
-                if (level.getBlockEntity(pos) instanceof JukeboxBlockEntity jukebox) {
-                    jukebox.setTheItem(stack.copyWithCount(1)); // dont copy the whole stack
-                    level.setBlock(pos, state.setValue(JukeboxBlock.HAS_RECORD, true), 3);
-
-                    if (!level.isClientSide && !event.getEntity().isCreative()) {
-                        stack.shrink(1);
-                    }
-                }
-
-                event.setCancellationResult(InteractionResult.SUCCESS);
-                event.setCanceled(true);
             }
         }
+    }
+
+    @SubscribeEvent
+    public static void onSoundPlay(VanillaGameEvent event) {
+        var holder = event.getVanillaEvent();
+        if (!holder.equals(GameEvent.JUKEBOX_PLAY)) {
+            return;
+        }
+        Level level = event.getLevel();
+        Vec3 pos = event.getEventPosition();
+
+        if (!(level.getBlockEntity(BlockPos.containing(pos)) instanceof JukeboxBlockEntity jukebox)) {
+            return;
+        }
+
+        ItemStack record = jukebox.getTheItem();
+        if (record.isEmpty() || record.get(DataComponents.CUSTOM_DATA) == null
+                || !record.get(DataComponents.CUSTOM_DATA).copyTag().contains("SelectedSong")) {
+            return;
+        }
+
+        String songName = record.get(DataComponents.CUSTOM_DATA).copyTag().getString("SelectedSong");
+        File musicFile = resolveMusicFile(songName);
+        engine.upsertInstance(BlockPos.containing(pos), songName, musicFile);
+
     }
 
     @SubscribeEvent
