@@ -26,7 +26,6 @@ import java.io.File;
 public class JukeboxInterceptor {
     static JukeboxAudioEngine engine = JukeboxAudioEngine.getInstance();
     static AudioManager am = AudioManager.getInstance();
-    private static BlockPos playingPos = null;
 
     @SubscribeEvent
     public static void onJukeboxRightClick(PlayerInteractEvent.RightClickBlock event) {
@@ -39,8 +38,7 @@ public class JukeboxInterceptor {
             // 1. EJECTION LOGIC
             if (state.getValue(JukeboxBlock.HAS_RECORD)) {
                 if (level.isClientSide) {
-                    engine.stop();
-                    playingPos = null; // Clear position safely
+                    engine.removeInstance(pos);
                 }
                 // Stop processing here. Let vanilla handle the ejection.
                 // Do NOT fall through to the insertion logic.
@@ -57,10 +55,11 @@ public class JukeboxInterceptor {
                 String songName = customData.copyTag().getString("SelectedSong");
 
                 if (level.isClientSide) {
-                    engine.stop();
                     File musicFile = resolveMusicFile(songName);
-                    engine.play(musicFile);
-                    playingPos = pos;
+                    engine.upsertInstance(pos, songName, musicFile);
+                    if (engine.getActivePos() == null) {
+                        engine.activate(pos);
+                    }
                     event.getEntity().displayClientMessage(
                             Component.literal("§bNow playing: " + songName.replace(".mp3", "")), true);
                 }
@@ -86,49 +85,89 @@ public class JukeboxInterceptor {
     @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.level == null || playingPos == null)
-            return;
-
-        BlockState state = mc.level.getBlockState(playingPos);
-
-        if (!state.is(Blocks.JUKEBOX) || !state.getValue(JukeboxBlock.HAS_RECORD)) {
-            engine.stop();
-            playingPos = null;
+        if (mc.level == null || mc.player == null) {
+            engine.clearInstancesAndStop();
             return;
         }
 
-        if (!engine.isPlaying()) {
-            playingPos = null;
-            return;
-        }
-
-        // Distance Check / Volume Fading
-        if (mc.player != null && engine.isPlaying()) {
-            double dx = mc.player.getX() - (playingPos.getX() + 0.5);
-            double dy = mc.player.getY() - (playingPos.getY() + 0.5);
-            double dz = mc.player.getZ() - (playingPos.getZ() + 0.5);
-            double distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
-
-            // Fetch the user's vanilla volume settings
-            float sliderMultiplier = dashketch.mods.custom_music_discs.client.override.volume_slider.getJukeboxVolume();
-
-            if (ModConfigs.SPEC.isLoaded() && ModConfigs.JUKEBOX_RANGE_BOOL.get()) {
-                double maxDistance = ModConfigs.JUKEBOX_RANGE.get() + 16.0;
-                double ratio = Math.clamp(distance / maxDistance, 0.0, 1.0);
-
-                // Calculate distance-based volume and multiply by slider
-                float volume = (float) Math.pow(1.0 - ratio, 2) * sliderMultiplier;
-                engine.setVolume(volume);
-
-            } else {
-                double maxDistance = 64.0 + 16.0;
-                double ratio = Math.clamp(distance / maxDistance, 0.0, 1.0);
-
-                // Calculate distance-based volume and multiply by slider
-                float volume = (float) Math.pow(1.0 - ratio, 2) * sliderMultiplier;
-                engine.setVolume(volume);
+        for (BlockPos pos : engine.getTrackedPositions()) {
+            BlockState trackedState = mc.level.getBlockState(pos);
+            if (!trackedState.is(Blocks.JUKEBOX) || !trackedState.getValue(JukeboxBlock.HAS_RECORD)) {
+                engine.removeInstance(pos);
             }
         }
+
+        if (engine.getTrackedPositions().isEmpty()) {
+            if (engine.isPlaying()) {
+                engine.stop();
+            }
+            return;
+        }
+
+        BlockPos nearestPos = findNearestTrackedPos(mc);
+        if (nearestPos == null) {
+            return;
+        }
+
+        engine.activate(nearestPos);
+
+        // If the current track finished naturally, remove the source and fall through
+        // to next nearest.
+        BlockPos activePos = engine.getActivePos();
+        if (activePos != null && !engine.isPlaying()) {
+            engine.removeInstance(activePos);
+            nearestPos = findNearestTrackedPos(mc);
+            if (nearestPos == null) {
+                return;
+            }
+            engine.activate(nearestPos);
+            if (!engine.isPlaying()) {
+                return;
+            }
+        }
+
+        BlockPos sourcePos = engine.getActivePos();
+        if (sourcePos == null) {
+            return;
+        }
+
+        double dx = mc.player.getX() - (sourcePos.getX() + 0.5);
+        double dy = mc.player.getY() - (sourcePos.getY() + 0.5);
+        double dz = mc.player.getZ() - (sourcePos.getZ() + 0.5);
+        double distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+        float sliderMultiplier = dashketch.mods.custom_music_discs.client.override.volume_slider.getJukeboxVolume();
+        double maxDistance = getMaxDistance();
+        double ratio = Math.clamp(distance / maxDistance, 0.0, 1.0);
+
+        float volume = (float) Math.pow(1.0 - ratio, 2) * sliderMultiplier;
+        engine.setVolume(volume);
+    }
+
+    private static BlockPos findNearestTrackedPos(Minecraft mc) {
+        BlockPos currentActive = engine.getActivePos();
+        BlockPos nearest = null;
+        double nearestDistSq = Double.MAX_VALUE;
+
+        for (BlockPos pos : engine.getTrackedPositions()) {
+            double distSq = mc.player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
+            if (distSq < nearestDistSq) {
+                nearestDistSq = distSq;
+                nearest = pos;
+            } else if (distSq == nearestDistSq && currentActive != null && pos.equals(currentActive)) {
+                // Keep the current source on exact tie to avoid rapid source flapping.
+                nearest = currentActive;
+            }
+        }
+
+        return nearest;
+    }
+
+    private static double getMaxDistance() {
+        if (ModConfigs.SPEC.isLoaded() && ModConfigs.JUKEBOX_RANGE_BOOL.get()) {
+            return ModConfigs.JUKEBOX_RANGE.get() + 16.0;
+        }
+        return 64.0 + 16.0;
     }
 
     private static File resolveMusicFile(String fileName) {
