@@ -22,7 +22,7 @@ import org.essentials.custom_background_music.AudioManager;
 
 import java.io.File;
 
-@EventBusSubscriber(modid = "custom_music_discs", bus = EventBusSubscriber.Bus.GAME)
+@EventBusSubscriber(modid = "custom_music_discs") // bus has been removed after 1.21.1
 public class JukeboxInterceptor {
     static JukeboxAudioEngine engine = JukeboxAudioEngine.getInstance();
     static AudioManager am = AudioManager.getInstance();
@@ -61,13 +61,15 @@ public class JukeboxInterceptor {
                     File musicFile = resolveMusicFile(songName);
                     engine.play(musicFile);
                     playingPos = pos;
-                    event.getEntity().displayClientMessage(Component.literal("§bNow playing: " + songName.replace(".mp3", "")), true);
+                    event.getEntity().displayClientMessage(
+                            Component.literal("§bNow playing: " + songName.replace(".mp3", "")), true);
                 }
 
                 // If this only happens on the server, the ClientTickEvent fires before the
-                // client receives the packet, sees HAS_RECORD is false, and instantly kills the music.
+                // client receives the packet, sees HAS_RECORD is false, and instantly kills the
+                // music.
                 if (level.getBlockEntity(pos) instanceof JukeboxBlockEntity jukebox) {
-                    jukebox.setTheItem(stack.copy());
+                    jukebox.setTheItem(stack.copyWithCount(1)); // dont copy the whole stack
                     level.setBlock(pos, state.setValue(JukeboxBlock.HAS_RECORD, true), 3);
 
                     if (!level.isClientSide && !event.getEntity().isCreative()) {
@@ -84,7 +86,8 @@ public class JukeboxInterceptor {
     @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.level == null || playingPos == null) return;
+        if (mc.level == null || playingPos == null)
+            return;
 
         BlockState state = mc.level.getBlockState(playingPos);
 
