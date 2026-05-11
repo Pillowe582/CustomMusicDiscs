@@ -6,6 +6,7 @@ import dashketch.mods.custom_music_discs.network.MusicUploadPayload;
 import dashketch.mods.custom_music_discs.network.ServerPayloadHandler;
 import dashketch.mods.custom_music_discs.server.ModConfigs;
 import dashketch.mods.custom_music_discs.server.recipeGen;
+import dashketch.mods.custom_music_discs.sound.ModSounds;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.data.DataGenerator;
@@ -36,6 +37,8 @@ public class Custom_music_discs {
 
     public Custom_music_discs(IEventBus modEventBus, ModContainer modContainer) {
         ModItems.register(modEventBus);
+        ModSounds.register(modEventBus);
+
         CREATIVE_MODE_TABS.register(modEventBus);
 
         modEventBus.addListener(this::registerNetworking);
@@ -47,11 +50,13 @@ public class Custom_music_discs {
         modContainer.registerConfig(ModConfig.Type.CLIENT, ModConfigs.SPEC);
     }
 
-    public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MODID);
+    public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS = DeferredRegister
+            .create(Registries.CREATIVE_MODE_TAB, MODID);
 
     // Registering the Creative Tab
     @SuppressWarnings("unused")
-    public static final DeferredHolder<CreativeModeTab, CreativeModeTab> CUSTOM_DISCS_TAB = CREATIVE_MODE_TABS.register("custom_music_discs",
+    public static final DeferredHolder<CreativeModeTab, CreativeModeTab> CUSTOM_DISCS_TAB = CREATIVE_MODE_TABS.register(
+            "custom_music_discs",
             () -> CreativeModeTab.builder()
                     .title(Component.translatable("itemGroup.custom_music_discs"))
                     .withTabsBefore(CreativeModeTabs.COMBAT)
@@ -67,8 +72,7 @@ public class Custom_music_discs {
         registrar.playToServer(
                 MusicUploadPayload.TYPE,
                 MusicUploadPayload.CODEC,
-                ServerPayloadHandler::handleData
-        );
+                ServerPayloadHandler::handleData);
     }
 
     private void gatherData(final GatherDataEvent event) {

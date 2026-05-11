@@ -1,0 +1,10 @@
+{
+    "custom_music_discs.blank_song": {
+        "sounds": [
+            {
+                "name": "custom_music_discs:blank_song",
+                "stream": true
+            }
+        ]
+    }
+}
