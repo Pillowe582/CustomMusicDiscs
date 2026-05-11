@@ -2,6 +2,7 @@ package dashketch.mods.custom_music_discs.item;
 
 import dashketch.mods.custom_music_discs.Custom_music_discs;
 import dashketch.mods.custom_music_discs.client.item.DiscBurnerItem;
+import dashketch.mods.custom_music_discs.sound.ModSounds;
 import net.minecraft.world.item.Item;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredItem;
@@ -13,7 +14,7 @@ public class ModItems {
 
     // Register the Blank Disc
     public static final DeferredItem<Item> BLANK_DISC = ITEMS.register("blank_custom_disc",
-            () -> new Item(new Item.Properties().stacksTo(64)));
+            () -> new Item(new Item.Properties().stacksTo(64).jukeboxPlayable(ModSounds.BLANK_SONG)));
 
     // Register the Disc Burner
     public static final DeferredItem<DiscBurnerItem> DISC_BURNER = ITEMS.register("disc_burner",
