@@ -35,9 +35,10 @@ public class ServerPayloadHandler {
 
             try {
                 // 2. Setup Directory
-                Path serverPath = Objects.requireNonNull(player.getServer()).getWorldPath(LevelResource.ROOT).resolve("config/uploaded_music");
+                Path serverPath = Objects.requireNonNull(player.getServer()).getWorldPath(LevelResource.ROOT)
+                        .resolve("config/uploaded_music");
                 File dir = serverPath.toFile();
-                if (!dir.exists()) //noinspection ResultOfMethodCallIgnored
+                if (!dir.exists()) // noinspection ResultOfMethodCallIgnored
                     dir.mkdirs();
 
                 String safeName = data.fileName().replaceAll("[^a-zA-Z0-9._-]", "_");
@@ -54,13 +55,11 @@ public class ServerPayloadHandler {
 
                         // 2. Add Lore
                         offhandItem.set(DataComponents.LORE, new net.minecraft.world.item.component.ItemLore(
-                                java.util.List.of(Component.literal("§7Track: " + safeName))
-                        ));
+                                java.util.List.of(Component.literal("§7Track: " + data.fileName()))));
 
                         // 3. Store the filename in CustomData
-                        offhandItem.update(DataComponents.CUSTOM_DATA, CustomData.EMPTY, customData ->
-                                customData.update(tag -> tag.putString("SelectedSong", safeName))
-                        );
+                        offhandItem.update(DataComponents.CUSTOM_DATA, CustomData.EMPTY,
+                                customData -> customData.update(tag -> tag.putString("SelectedSong", safeName)));
 
                         // 4. Add enchant glint
                         offhandItem.set(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true);

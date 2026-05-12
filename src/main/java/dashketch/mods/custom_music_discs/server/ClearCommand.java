@@ -15,7 +15,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.stream.Stream;
 
-@EventBusSubscriber(modid = Custom_music_discs.MODID, bus = EventBusSubscriber.Bus.GAME)
+@EventBusSubscriber(modid = Custom_music_discs.MODID)
 public class ClearCommand {
 
     @SubscribeEvent

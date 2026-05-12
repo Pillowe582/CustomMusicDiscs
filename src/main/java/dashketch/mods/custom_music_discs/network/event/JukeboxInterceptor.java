@@ -63,6 +63,9 @@ public class JukeboxInterceptor {
                     if (engine.getActivePos() == null) {
                         engine.activate(pos);
                     }
+
+                    // This message will be covered by vanilla message,
+                    // i havent found a way to block it
                     event.getEntity().displayClientMessage(
                             Component.literal("§bNow playing: " + songName.replace(".mp3", "")), true);
                 }
