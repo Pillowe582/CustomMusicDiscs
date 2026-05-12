@@ -12,9 +12,10 @@
 
 * 🎼 **Dynamic Audio Streaming**: Powered by an isolated **JLayer engine**, your music streams directly without bloat or massive resource packs.
 * 📡 **Proximity-Based Sound**: Just like vanilla discs! The music gets quieter as you walk away and fades out completely at 64 blocks.
-* 🎚️ **Smart Jukebox Logic**: Discs behave exactly as they should. Breaking the jukebox, ejecting the disc, or even a hopper pulling the record will instantly stop the audio.
+* 🎚️ **Vanilla-like Jukebox Logic**: Discs behave exactly as they should. Breaking the jukebox, ejecting the disc, or even a hopper pulling the record will instantly stop the audio. Jukeboxes playing the record also power adjacent blocks, emit particles, and make parrots dance.
 * 🖥️ **Seamless GUI Burning**: No commands, no config digging. Just right-click with the **Disc Burner** to open the interface and burn your favorite tunes.
 * 🤝 **Mod Compatibility**: Designed to work alongside other music mods without interfering with their keybinds or global playlists.
+* 😋 **Immersing Music**: Multiple jukeboxes can be activated at the same time, and the nearest can be heard.  Moving between jukeboxes playing the same song **won't** interrupt the music. The music automatically loops and restarts, even if you rejoin the world.
 
 ---
 
