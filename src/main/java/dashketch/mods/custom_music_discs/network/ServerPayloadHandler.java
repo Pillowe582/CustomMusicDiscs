@@ -51,7 +51,7 @@ public class ServerPayloadHandler {
                     // 4. Finalize on Last Chunk
                     if (data.isLastChunk()) {
                         // 1. Rename the disc
-                        offhandItem.set(DataComponents.CUSTOM_NAME, Component.literal("§bBurned Music Disc"));
+                        offhandItem.set(DataComponents.CUSTOM_NAME, Component.literal(data.fileName()));
 
                         // 2. Add Lore
                         offhandItem.set(DataComponents.LORE, new net.minecraft.world.item.component.ItemLore(
