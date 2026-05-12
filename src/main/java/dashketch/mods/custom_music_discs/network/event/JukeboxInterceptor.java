@@ -20,14 +20,12 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.event.VanillaGameEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
-import org.essentials.custom_background_music.AudioManager;
 
 import java.io.File;
 
 @EventBusSubscriber(modid = "custom_music_discs") // bus has been removed after 1.21.1
 public class JukeboxInterceptor {
     static JukeboxAudioEngine engine = JukeboxAudioEngine.getInstance();
-    static AudioManager am = AudioManager.getInstance();
 
     @SubscribeEvent
     public static void onJukeboxRightClick(PlayerInteractEvent.RightClickBlock event) {
@@ -46,11 +44,6 @@ public class JukeboxInterceptor {
                 // Stop processing here. Let vanilla handle the ejection.
                 // Do NOT fall through to the insertion logic.
                 return;
-            }
-
-            // 2. INSERTION LOGIC (Jukebox is definitively empty)
-            if (level.isClientSide) {
-                am.stop();
             }
 
             CustomData customData = stack.get(DataComponents.CUSTOM_DATA);

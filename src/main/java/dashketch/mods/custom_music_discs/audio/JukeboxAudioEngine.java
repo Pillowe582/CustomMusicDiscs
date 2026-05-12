@@ -4,7 +4,6 @@ import javazoom.jl.player.AudioDevice;
 import javazoom.jl.player.JavaSoundAudioDevice;
 import javazoom.jl.player.Player;
 import net.minecraft.core.BlockPos;
-import org.essentials.custom_background_music.MusicMuter;
 
 import javax.sound.sampled.FloatControl;
 import javax.sound.sampled.SourceDataLine;
@@ -130,12 +129,11 @@ public class JukeboxAudioEngine {
     }
 
     private void playInternal(TrackedJukebox jukebox) {
-        
+
         if (!jukebox.musicFile.exists()) {
             return;
         }
-
-        MusicMuter.muteMinecraftMusic();
+        // Mute vanilla music
         stopPlayer(false);
 
         musicThread = new Thread(() -> {
@@ -163,7 +161,7 @@ public class JukeboxAudioEngine {
             musicThread = null;
         }
         if (unmuteVanillaMusic) {
-            MusicMuter.unmuteMinecraftMusic();
+            // Unmute vanilla music
         }
     }
 
